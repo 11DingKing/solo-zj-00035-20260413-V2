@@ -1,0 +1,303 @@
+<section class="container">
+  <header class="header">
+    <h1>Product Manager</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="toggleCategoryManagement()">
+        {{ showCategoryManagement() ? 'Hide Categories' : 'Manage Categories' }}
+      </button>
+      <button class="btn btn-primary" (click)="openForm()">Add New Product</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="loading" role="status" aria-live="polite">Loading...</div>
+  }
+
+  <!-- Category Management Section -->
+  @if (showCategoryManagement()) {
+    <section class="category-management">
+      <h2>Category Management</h2>
+
+      <!-- Category Form -->
+      <div class="category-form">
+        <h3>{{ editingCategory() ? 'Edit Category' : 'Add New Category' }}</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="categoryName">Category Name *</label>
+            <input
+              #catNameInput
+              id="categoryName"
+              type="text"
+              class="form-input"
+              [value]="categoryFormData().name"
+              (change)="updateCategoryFormName(catNameInput.value)"
+              placeholder="Enter category name"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="parentCategory">Parent Category (Optional)</label>
+            <select
+              #parentSelect
+              id="parentCategory"
+              class="form-input"
+              (change)="updateCategoryFormParentId(parentSelect.value)"
+            >
+              <option value="">-- No Parent (Root Category) --</option>
+              @for (cat of getParentCategories(); track cat.id) {
+                @if (!editingCategory() || editingCategory()?.id !== cat.id) {
+                  <option [value]="cat.id" [selected]="categoryFormData().parentId === cat.id">
+                    {{ cat.name }}
+                  </option>
+                }
+              }
+            </select>
+            <small class="form-hint"
+              >Maximum 2 levels allowed. Child categories cannot have their own children.</small
+            >
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" (click)="resetCategoryForm()">Reset</button>
+          <button class="btn btn-primary" (click)="saveCategory()">
+            {{ editingCategory() ? 'Update' : 'Create' }} Category
+          </button>
+        </div>
+      </div>
+
+      <!-- Category Statistics -->
+      <div class="category-stats">
+        <h3>Category Statistics</h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Parent</th>
+              <th>Product Count</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cat of categoriesFlat(); track cat.id) {
+              <tr>
+                <td>
+                  @if (isChildCategory(cat)) {
+                    <span class="child-indicator">└─</span>
+                  }
+                  {{ cat.name }}
+                </td>
+                <td>{{ cat.parentName || '-' }}</td>
+                <td>{{ getProductCountForCategory(cat.id!) }}</td>
+                <td class="actions">
+                  <button class="btn btn-edit" (click)="openCategoryEdit(cat)">Edit</button>
+                  <button class="btn btn-delete" (click)="deleteCategory(cat.id)">Delete</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="empty-message">
+                  No categories found. Create one to get started!
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- Category Filter -->
+  <section class="filter-section">
+    <div class="filter-group">
+      <label>Filter by Category:</label>
+      <div class="dropdown" [class.open]="showCategoryDropdown()">
+        <button class="dropdown-toggle" (click)="showCategoryDropdown.set(!showCategoryDropdown())">
+          {{ selectedCategoryId() ? getCategoryName(selectedCategoryId()!) : 'All Categories' }}
+          <span class="caret">▼</span>
+        </button>
+        @if (showCategoryDropdown()) {
+          <div class="dropdown-menu" (click)="$event.stopPropagation()">
+            <div class="dropdown-item" (click)="selectCategory(null)">
+              <strong>All Categories</strong>
+            </div>
+            @for (cat of categories(); track cat.id) {
+              <div class="dropdown-item parent-category" (click)="selectCategory(cat.id!)">
+                <span class="category-name">{{ cat.name }}</span>
+                <span class="product-count">({{ getProductCountForCategory(cat.id!) }})</span>
+              </div>
+              @for (child of cat.children; track child.id) {
+                <div class="dropdown-item child-category" (click)="selectCategory(child.id!)">
+                  <span class="child-indicator">└─</span>
+                  <span class="category-name">{{ child.name }}</span>
+                  <span class="product-count">({{ getProductCountForCategory(child.id!) }})</span>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Product List -->
+  <section class="products-section">
+    @if (products().length > 0) {
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Name</th>
+            <th scope="col">Description</th>
+            <th scope="col">Category</th>
+            <th scope="col">Price</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (product of products(); track product.id) {
+            <tr>
+              <td>{{ product.id }}</td>
+              <td>{{ product.name }}</td>
+              <td>{{ product.description }}</td>
+              <td>{{ product.categoryName || '-' }}</td>
+              <td>{{ product.price.toFixed(2) }}€</td>
+              <td>{{ product.quantity }}</td>
+              <td class="actions">
+                <button
+                  class="btn btn-edit"
+                  (click)="openForm(product)"
+                  aria-label="Edit product {{ product.name }}"
+                >
+                  Edit
+                </button>
+                <button
+                  class="btn btn-delete"
+                  (click)="deleteProduct(product.id)"
+                  aria-label="Delete product {{ product.name }}"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="empty-message" role="status">No products found. Create one to get started!</div>
+    }
+  </section>
+
+  <!-- Product Form Modal -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="closeForm()" role="presentation" aria-hidden="false">
+      <div
+        class="modal"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <header class="modal-header">
+          <h2 id="modal-title">{{ selectedProduct() ? 'Edit Product' : 'Create New Product' }}</h2>
+          <button class="close-btn" (click)="closeForm()" aria-label="Close dialog">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="name">Product Name *</label>
+            <input
+              #nameInput
+              id="name"
+              type="text"
+              class="form-input"
+              [value]="formData().name"
+              (change)="updateFormData('name', nameInput.value)"
+              placeholder="Enter product name"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea
+              #descInput
+              id="description"
+              class="form-input"
+              [value]="formData().description"
+              (change)="updateFormData('description', descInput.value)"
+              placeholder="Enter product description"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="category">Category</label>
+            <select
+              #catSelect
+              id="category"
+              class="form-input"
+              (change)="updateFormDataCategoryId(catSelect.value)"
+            >
+              <option value="">-- No Category --</option>
+              @for (cat of categories(); track cat.id) {
+                <option [value]="cat.id" [selected]="formData().categoryId === cat.id">
+                  {{ cat.name }}
+                </option>
+                @for (child of cat.children; track child.id) {
+                  <option [value]="child.id" [selected]="formData().categoryId === child.id">
+                    └─ {{ child.name }}
+                  </option>
+                }
+              }
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="price">Price *</label>
+              <input
+                #priceInput
+                id="price"
+                type="number"
+                class="form-input"
+                [value]="formData().price"
+                (change)="updateFormData('price', priceInput.value)"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="quantity">Quantity *</label>
+              <input
+                #qtyInput
+                id="quantity"
+                type="number"
+                class="form-input"
+                [value]="formData().quantity"
+                (change)="updateFormData('quantity', qtyInput.value)"
+                placeholder="0"
+                min="0"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeForm()">Cancel</button>
+          <button class="btn btn-primary" (click)="saveProduct()" [disabled]="loading()">
+            {{ loading() ? 'Saving...' : 'Save Product' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+</section>
