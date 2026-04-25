@@ -1,0 +1,137 @@
+<section class="container">
+  <header class="header">
+    <h1>创建订单</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" routerLink="/orders">查看订单列表</button>
+      <button class="btn btn-secondary" routerLink="/products">返回商品列表</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (successMessage()) {
+    <div class="alert alert-success" role="alert">{{ successMessage() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="loading" role="status" aria-live="polite">加载中...</div>
+  }
+
+  <div class="order-layout">
+    <!-- Product Selection -->
+    <section class="product-section">
+      <h2>选择商品</h2>
+      
+      @if (products().length > 0) {
+        <div class="product-grid">
+          @for (product of products(); track product.id) {
+            <div class="product-card" [class.out-of-stock]="product.quantity <= 0">
+              <div class="product-info">
+                <h3>{{ product.name }}</h3>
+                @if (product.categoryName) {
+                  <span class="category">{{ product.categoryName }}</span>
+                }
+                <p class="description">{{ product.description || '-' }}</p>
+              </div>
+              <div class="product-meta">
+                <div class="price">{{ product.price.toFixed(2) }}€</div>
+                <div class="stock" [class.low]="product.quantity <= 5 && product.quantity > 0">
+                  库存: {{ product.quantity }}
+                </div>
+              </div>
+              <button 
+                class="btn btn-primary"
+                [disabled]="product.quantity <= 0"
+                (click)="addToOrder(product)"
+              >
+                {{ product.quantity <= 0 ? '缺货' : '加入订单' }}
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-message">暂无可用商品</div>
+      }
+    </section>
+
+    <!-- Order Summary -->
+    <section class="summary-section">
+      <h2>订单摘要</h2>
+      
+      <div class="form-group">
+        <label for="username">用户名 *</label>
+        <input
+          #usernameInput
+          id="username"
+          type="text"
+          class="form-input"
+          [value]="username()"
+          (change)="username.set(usernameInput.value)"
+          placeholder="请输入用户名"
+        />
+      </div>
+
+      <div class="selected-items">
+        <h3>已选商品</h3>
+        
+        @if (getSelectedItemsArray().length > 0) {
+          <div class="items-list">
+            @for (item of getSelectedItemsArray(); track item.product.id) {
+              <div class="selected-item">
+                <div class="item-info">
+                  <div class="item-name">{{ item.product.name }}</div>
+                  <div class="item-price">{{ item.product.price.toFixed(2) }}€ × {{ item.quantity }}</div>
+                </div>
+                <div class="item-controls">
+                  <button 
+                    class="btn btn-secondary btn-small"
+                    (click)="updateQuantity(item.product.id!, item.quantity - 1)"
+                    [disabled]="item.quantity <= 1"
+                  >
+                    -
+                  </button>
+                  <span class="quantity-display">{{ item.quantity }}</span>
+                  <button 
+                    class="btn btn-secondary btn-small"
+                    (click)="updateQuantity(item.product.id!, item.quantity + 1)"
+                    [disabled]="item.quantity >= item.product.quantity"
+                  >
+                    +
+                  </button>
+                  <button 
+                    class="btn btn-delete btn-small"
+                    (click)="removeFromOrder(item.product.id!)"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div class="item-subtotal">
+                  小计: {{ (item.product.price * item.quantity).toFixed(2) }}€
+                </div>
+              </div>
+            }
+          </div>
+          
+          <div class="total-section">
+            <div class="total-amount">
+              <span class="label">总金额:</span>
+              <span class="value">{{ totalAmount().toFixed(2) }}€</span>
+            </div>
+          </div>
+          
+          <button 
+            class="btn btn-primary btn-large"
+            (click)="createOrder()"
+            [disabled]="loading() || selectedItems().size === 0 || !username().trim()"
+          >
+            {{ loading() ? '创建中...' : '确认创建订单' }}
+          </button>
+        } @else {
+          <div class="empty-message">请从左侧选择商品</div>
+        }
+      </div>
+    </section>
+  </div>
+</section>

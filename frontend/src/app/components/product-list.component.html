@@ -2,6 +2,8 @@
   <header class="header">
     <h1>Product Manager</h1>
     <div class="header-actions">
+      <button class="btn btn-secondary" routerLink="/orders">订单管理</button>
+      <button class="btn btn-primary" routerLink="/create-order">创建订单</button>
       <button class="btn btn-secondary" (click)="toggleCategoryManagement()">
         {{ showCategoryManagement() ? 'Hide Categories' : 'Manage Categories' }}
       </button>

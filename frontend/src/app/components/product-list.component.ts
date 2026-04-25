@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ProductService } from '../services/product.service';
 import { CategoryService } from '../services/category.service';
 import { Product } from '../models/product.model';
@@ -9,7 +10,7 @@ import { Category, CategoryStatistics } from '../models/category.model';
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './product-list.component.html',
   styleUrl: './product-list.component.scss',
 })

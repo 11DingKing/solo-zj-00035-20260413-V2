@@ -1,0 +1,156 @@
+<section class="container">
+  <header class="header">
+    <h1>订单管理</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" routerLink="/create-order">创建订单</button>
+      <button class="btn btn-secondary" routerLink="/products">返回商品列表</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="loading" role="status" aria-live="polite">加载中...</div>
+  }
+
+  <!-- Status Tabs -->
+  <section class="tabs-section">
+    <div class="tabs">
+      @for (status of statuses; track status) {
+        <button 
+          class="tab" 
+          [class.active]="selectedStatus() === status"
+          (click)="selectStatus(status)"
+        >
+          {{ status === null ? '全部' : getStatusLabel(status) }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Order List -->
+  <section class="orders-section">
+    @if (orders().length > 0) {
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">订单号</th>
+            <th scope="col">用户名</th>
+            <th scope="col">总金额</th>
+            <th scope="col">状态</th>
+            <th scope="col">创建时间</th>
+            <th scope="col">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <td>{{ order.orderNumber }}</td>
+              <td>{{ order.username }}</td>
+              <td>{{ order.totalAmount.toFixed(2) }}€</td>
+              <td>
+                <span class="status-badge" [style.backgroundColor]="getStatusColor(order.status)">
+                  {{ getStatusLabel(order.status) }}
+                </span>
+              </td>
+              <td>{{ formatDate(order.createdAt) }}</td>
+              <td class="actions">
+                <button class="btn btn-edit" (click)="openDetail(order)">详情</button>
+                @if (order.status === OrderStatus.PENDING) {
+                  <button class="btn btn-delete" (click)="cancelOrder(order)">取消</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="pagination">
+          <button class="btn btn-secondary" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0">
+            上一页
+          </button>
+          <span class="page-info">
+            第 {{ currentPage() + 1 }} 页 / 共 {{ totalPages() }} 页 ({{ totalElements() }} 条)
+          </span>
+          <button class="btn btn-secondary" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= totalPages() - 1">
+            下一页
+          </button>
+        </div>
+      }
+    } @else {
+      <div class="empty-message" role="status">暂无订单记录</div>
+    }
+  </section>
+
+  <!-- Order Detail Modal -->
+  @if (showDetailModal() && selectedOrder()) {
+    <div class="modal-overlay" (click)="closeDetail()" role="presentation" aria-hidden="false">
+      <div class="modal modal-large" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="modal-header">
+          <h2>订单详情</h2>
+          <button class="close-btn" (click)="closeDetail()" aria-label="Close dialog">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="order-info">
+            <div class="info-row">
+              <span class="label">订单号:</span>
+              <span class="value">{{ selectedOrder()!.orderNumber }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">用户名:</span>
+              <span class="value">{{ selectedOrder()!.username }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">状态:</span>
+              <span class="status-badge" [style.backgroundColor]="getStatusColor(selectedOrder()!.status)">
+                {{ getStatusLabel(selectedOrder()!.status) }}
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="label">创建时间:</span>
+              <span class="value">{{ formatDate(selectedOrder()!.createdAt) }}</span>
+            </div>
+            <div class="info-row total">
+              <span class="label">总金额:</span>
+              <span class="value">{{ selectedOrder()!.totalAmount.toFixed(2) }}€</span>
+            </div>
+          </div>
+
+          <h3 class="items-title">订单项</h3>
+          <table class="table items-table">
+            <thead>
+              <tr>
+                <th>商品名称</th>
+                <th>单价</th>
+                <th>数量</th>
+                <th>小计</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of selectedOrder()!.orderItems; track item.id) {
+                <tr>
+                  <td>{{ item.productName }}</td>
+                  <td>{{ item.unitPrice.toFixed(2) }}€</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ (item.unitPrice * item.quantity).toFixed(2) }}€</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeDetail()">关闭</button>
+          @if (selectedOrder()!.status === OrderStatus.PENDING) {
+            <button class="btn btn-delete" (click)="cancelOrder(selectedOrder()!); closeDetail()">取消订单</button>
+          }
+        </footer>
+      </div>
+    </div>
+  }
+</section>
